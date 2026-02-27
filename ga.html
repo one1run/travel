@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小公主過橋大冒險</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Nunito', sans-serif; background-color: #fdf2f8; }
+    .bridge-step { left: calc(10% + var(--step) * (80% / 7)); transform: translateX(-50%); }
+    #princess { transition: left 0.4s ease-in-out; left: calc(10% + var(--pos) * (80% / 7)); transform: translate(-50%, -50%); }
+    
+    @keyframes jump {
+      0%, 100% { transform: translate(-50%, -50%); }
+      50% { transform: translate(-50%, calc(-50% - 60px)); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translate(-50%, -50%); }
+      20%, 60% { transform: translate(calc(-50% - 15px), -50%); }
+      40%, 80% { transform: translate(calc(-50% + 15px), -50%); }
+    }
+    @keyframes fall {
+      0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
+      100% { transform: translate(-50%, calc(-50% + 200px)) rotate(180deg); opacity: 0; }
+    }
+    @keyframes bridge-shake {
+      0%, 100% { transform: translateY(-50%); }
+      25% { transform: translateY(calc(-50% - 5px)); }
+      75% { transform: translateY(calc(-50% + 5px)); }
+    }
+    
+    .anim-jump { animation: jump 0.5s ease-in-out; }
+    .anim-shake { animation: shake 0.5s ease-in-out; }
+    .anim-fall { animation: fall 1s ease-in forwards; }
+    .anim-bridge-shake { animation: bridge-shake 0.4s ease-in-out 2; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+  <!-- Main Container -->
+  <div class="w-full max-w-4xl bg-white rounded-[3rem] shadow-2xl p-6 sm:p-10 border-8 border-pink-100 relative overflow-hidden">
+    
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-2xl sm:text-3xl font-black text-pink-500 tracking-tight">小公主過橋大冒險 👑</h1>
+      <div class="flex space-x-2 bg-pink-100 px-4 py-2 rounded-full border-2 border-pink-200" id="hearts-container">
+        <!-- Hearts injected by JS -->
+      </div>
+    </div>
+
+    <!-- Game Area -->
+    <div class="relative w-full h-64 sm:h-80 bg-white rounded-3xl overflow-hidden border-4 border-gray-200 shadow-inner">
+      <!-- River -->
+      <div class="absolute inset-0 opacity-50">
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <defs>
+            <pattern id="scribble" x="0" y="0" width="120" height="120" patternUnits="userSpaceOnUse">
+              <path d="M 10 0 Q 30 30 10 60 T 20 120 M 40 0 Q 20 40 50 70 T 30 120 M 70 0 Q 90 30 60 60 T 80 120 M 100 0 Q 80 40 110 70 T 90 120" fill="none" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#scribble)" />
+        </svg>
+      </div>
+
+      <!-- Bridge -->
+      <div id="bridge" class="absolute top-1/2 left-0 w-full h-24 sm:h-32 transform -translate-y-1/2 flex items-center">
+        <svg width="100%" height="100%" preserveAspectRatio="none" class="absolute inset-0 opacity-70">
+           <path d="M 0 20 Q 200 10 400 30 T 800 20 L 800 100 Q 600 110 400 90 T 0 100 Z" fill="#FBCFE8" />
+           <path d="M 0 30 Q 200 20 400 40 T 800 30 M 0 50 Q 200 40 400 60 T 800 50 M 0 70 Q 200 60 400 80 T 800 70 M 0 90 Q 200 80 400 100 T 800 90" fill="none" stroke="#F472B6" stroke-width="2" />
+        </svg>
+        <!-- Steps injected by JS -->
+        <div id="steps-container"></div>
+      </div>
+
+      <!-- Princess -->
+      <div id="princess" class="absolute top-1/2 -mt-16 sm:-mt-20 z-10 flex flex-col items-center" style="--pos: 0;">
+        <div id="help-bubble" class="hidden absolute -top-12 sm:-top-16 bg-white px-3 py-1.5 rounded-2xl text-sm sm:text-base font-bold text-blue-500 whitespace-nowrap border-2 border-blue-200 shadow-md">
+          救命啊！💦
+          <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b-2 border-r-2 border-blue-200 transform rotate-45"></div>
+        </div>
+        <div id="princess-normal"></div>
+        <div id="princess-falling" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="mt-8 sm:mt-12 flex flex-col items-center">
+      <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+        <div class="flex items-center space-x-4 sm:space-x-6 text-4xl sm:text-6xl font-black text-gray-700">
+          <span id="num1" class="bg-pink-50 w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center rounded-3xl shadow-sm border-4 border-pink-200 text-pink-600">2</span>
+          <span class="text-pink-300">×</span>
+          <span id="num2" class="bg-pink-50 w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center rounded-3xl shadow-sm border-4 border-pink-200 text-pink-600">2</span>
+          <span class="text-pink-300">=</span>
+        </div>
+        
+        <form id="game-form" class="flex items-center space-x-3 sm:space-x-4">
+          <input id="answer-input" type="number" class="w-24 sm:w-32 h-16 sm:h-24 text-center bg-white rounded-3xl shadow-inner border-4 border-pink-300 focus:outline-none focus:border-pink-500 focus:ring-4 focus:ring-pink-200 text-4xl sm:text-5xl font-black text-gray-700 transition-all" placeholder="?" disabled>
+          <button id="submit-btn" type="submit" class="h-16 sm:h-24 px-6 sm:px-8 bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300 text-white rounded-3xl font-black text-xl sm:text-2xl shadow-[0_8px_0_0_rgba(219,39,119,1)] hover:shadow-[0_4px_0_0_rgba(219,39,119,1)] hover:translate-y-1 disabled:shadow-none disabled:translate-y-2 transition-all active:shadow-none active:translate-y-2" disabled>送出</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-md rounded-[2.5rem]">
+      <div id="modal-content" class="bg-white p-8 sm:p-10 rounded-[2.5rem] shadow-2xl text-center max-w-sm w-full mx-4 border-8 border-pink-100 transition-transform transform scale-100">
+        <!-- Modal content injected by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const special = [2, 3, 5, 9];
+    const general = [2, 3, 4, 5, 6, 7, 8, 9];
+    let gameState = 'start';
+    let lives = 3;
+    let position = 0;
+    let currentQuestion = { num1: 2, num2: 2 };
+
+    const elements = {
+      hearts: document.getElementById('hearts-container'),
+      steps: document.getElementById('steps-container'),
+      princess: document.getElementById('princess'),
+      princessNormal: document.getElementById('princess-normal'),
+      princessFalling: document.getElementById('princess-falling'),
+      helpBubble: document.getElementById('help-bubble'),
+      bridge: document.getElementById('bridge'),
+      num1: document.getElementById('num1'),
+      num2: document.getElementById('num2'),
+      input: document.getElementById('answer-input'),
+      submitBtn: document.getElementById('submit-btn'),
+      form: document.getElementById('game-form'),
+      modalOverlay: document.getElementById('modal-overlay'),
+      modalContent: document.getElementById('modal-content')
+    };
+
+    const princessNormalSVG = `
+      <svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-md">
+        <path d="M 30 40 L 10 50 M 30 40 L 50 50" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" />
+        <path d="M 25 60 L 20 78 M 35 60 L 40 78" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" />
+        <path d="M 30 25 L 15 60 L 45 60 Z" fill="#FDE047" stroke-linejoin="round" />
+        <circle cx="30" cy="20" r="12" fill="#FDE047" />
+        <path d="M 30 8 L 30 2 M 20 12 L 12 6 M 40 12 L 48 6 M 18 20 L 10 20 M 42 20 L 50 20 M 18 28 L 10 32 M 42 28 L 50 32" fill="none" stroke="#FDE047" stroke-width="3" stroke-linecap="round" />
+        <circle cx="26" cy="18" r="1.5" fill="#422006" />
+        <circle cx="34" cy="18" r="1.5" fill="#422006" />
+        <path d="M 26 23 Q 30 27 34 23" fill="none" stroke="#422006" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+    `;
+
+    const princessFallingSVG = `
+      <svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-md">
+        <path d="M 30 40 L 10 20 M 30 40 L 50 20" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" />
+        <path d="M 25 60 L 20 78 M 35 60 L 40 78" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" />
+        <path d="M 30 25 L 15 60 L 45 60 Z" fill="#FDE047" stroke-linejoin="round" />
+        <circle cx="30" cy="20" r="12" fill="#FDE047" />
+        <path d="M 30 8 L 30 2 M 20 12 L 12 6 M 40 12 L 48 6 M 18 20 L 10 20 M 42 20 L 50 20 M 18 28 L 10 32 M 42 28 L 50 32" fill="none" stroke="#FDE047" stroke-width="3" stroke-linecap="round" />
+        <circle cx="26" cy="18" r="1.5" fill="#422006" />
+        <circle cx="34" cy="18" r="1.5" fill="#422006" />
+        <ellipse cx="30" cy="24" rx="2.5" ry="3.5" fill="#422006" />
+      </svg>
+    `;
+
+    elements.princessNormal.innerHTML = princessNormalSVG;
+    elements.princessFalling.innerHTML = princessFallingSVG;
+
+    function generateQuestion() {
+      const a = special[Math.floor(Math.random() * special.length)];
+      const b = general[Math.floor(Math.random() * general.length)];
+      return Math.random() > 0.5 ? { num1: a, num2: b } : { num1: b, num2: a };
+    }
+
+    function renderHearts() {
+      elements.hearts.innerHTML = '';
+      for (let i = 1; i <= 3; i++) {
+        const isAlive = lives >= i;
+        elements.hearts.innerHTML += `
+          <svg class="w-8 h-8 ${isAlive ? 'text-red-500 fill-red-500' : 'text-gray-300 fill-current'} transition-all duration-300 ${isAlive ? 'scale-100' : 'scale-0 opacity-0'}" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+        `;
+      }
+    }
+
+    function renderSteps() {
+      elements.steps.innerHTML = '';
+      for (let i = 0; i <= 7; i++) {
+        let label = '';
+        if (i === 0) label = `<span class="absolute -bottom-8 text-lg sm:text-xl font-bold text-[#78350F]" style="font-family: 'Comic Sans MS', cursive, sans-serif">Start</span>`;
+        if (i === 7) label = `<span class="absolute -bottom-8 text-lg sm:text-xl font-bold text-[#78350F]" style="font-family: 'Comic Sans MS', cursive, sans-serif">end</span>`;
+        
+        elements.steps.innerHTML += `
+          <div class="absolute h-full flex flex-col items-center justify-center bridge-step" style="--step: ${i}">
+            <div class="w-1.5 h-12 sm:h-16 bg-[#FDE047] rounded-full transform -rotate-6 shadow-sm"></div>
+            ${label}
+          </div>
+        `;
+      }
+    }
+
+    function showModal(type) {
+      elements.modalOverlay.classList.remove('hidden');
+      let content = '';
+      if (type === 'start') {
+        content = `
+          <div class="flex justify-center mb-6">${princessNormalSVG}</div>
+          <h2 class="text-3xl font-black text-pink-500 mb-4">準備好了嗎？</h2>
+          <p class="text-gray-500 mb-8 text-lg font-bold">回答乘法問題，<br/>幫助小公主安全過橋！✨</p>
+          <button onclick="startGame()" class="w-full bg-pink-500 text-white py-4 rounded-2xl font-black text-2xl shadow-[0_6px_0_0_rgba(219,39,119,1)] hover:shadow-[0_3px_0_0_rgba(219,39,119,1)] hover:translate-y-1 transition-all active:shadow-none active:translate-y-[6px]">開始遊戲 🚀</button>
+        `;
+      } else if (type === 'won') {
+        content = `
+          <div class="text-7xl mb-6">🎉</div>
+          <h2 class="text-3xl font-black text-pink-500 mb-4">過關恭喜！🎊</h2>
+          <p class="text-gray-500 mb-8 text-lg font-bold">太棒了！<br/>小公主成功到達對岸了！✨</p>
+          <button onclick="startGame()" class="w-full bg-pink-500 text-white py-4 rounded-2xl font-black text-2xl shadow-[0_6px_0_0_rgba(219,39,119,1)] hover:shadow-[0_3px_0_0_rgba(219,39,119,1)] hover:translate-y-1 transition-all active:shadow-none active:translate-y-[6px]">再玩一次 🔄</button>
+        `;
+      } else if (type === 'lost') {
+        content = `
+          <div class="text-7xl mb-6">💦</div>
+          <h2 class="text-3xl font-black text-blue-500 mb-4">挑戰失敗</h2>
+          <p class="text-gray-500 mb-8 text-lg font-bold">哎呀！小公主掉進水裡了... 🥺<br/>不要灰心，再試一次吧！</p>
+          <button onclick="startGame()" class="w-full bg-blue-500 text-white py-4 rounded-2xl font-black text-2xl shadow-[0_6px_0_0_rgba(59,130,246,1)] hover:shadow-[0_3px_0_0_rgba(59,130,246,1)] hover:translate-y-1 transition-all active:shadow-none active:translate-y-[6px]">重新開始 🔄</button>
+        `;
+      }
+      elements.modalContent.innerHTML = content;
+    }
+
+    function hideModal() {
+      elements.modalOverlay.classList.add('hidden');
+    }
+
+    function updateQuestion() {
+      elements.num1.innerText = currentQuestion.num1;
+      elements.num2.innerText = currentQuestion.num2;
+      elements.input.value = '';
+      elements.submitBtn.disabled = true;
+    }
+
+    window.startGame = () => {
+      gameState = 'playing';
+      lives = 3;
+      position = 0;
+      currentQuestion = generateQuestion();
+      
+      elements.princess.style.setProperty('--pos', position);
+      elements.princess.classList.remove('anim-fall');
+      elements.princessNormal.classList.remove('hidden');
+      elements.princessFalling.classList.add('hidden');
+      elements.helpBubble.classList.add('hidden');
+      
+      elements.input.disabled = false;
+      
+      renderHearts();
+      updateQuestion();
+      hideModal();
+      
+      setTimeout(() => elements.input.focus(), 100);
+    };
+
+    elements.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (gameState !== 'playing' || !elements.input.value) return;
+
+      const answer = parseInt(elements.input.value, 10);
+      const correct = currentQuestion.num1 * currentQuestion.num2;
+
+      elements.input.disabled = true;
+      elements.submitBtn.disabled = true;
+
+      if (answer === correct) {
+        elements.princess.classList.add('anim-jump');
+        setTimeout(() => {
+          elements.princess.classList.remove('anim-jump');
+          position++;
+          elements.princess.style.setProperty('--pos', position);
+          
+          if (position >= 7) {
+            gameState = 'won';
+            setTimeout(() => showModal('won'), 500);
+          } else {
+            currentQuestion = generateQuestion();
+            updateQuestion();
+            elements.input.disabled = false;
+            elements.input.focus();
+          }
+        }, 500);
+      } else {
+        elements.princess.classList.add('anim-shake');
+        lives--;
+        renderHearts();
+        
+        setTimeout(() => {
+          elements.princess.classList.remove('anim-shake');
+          if (lives <= 0) {
+            gameState = 'lost';
+            elements.princessNormal.classList.add('hidden');
+            elements.princessFalling.classList.remove('hidden');
+            elements.helpBubble.classList.remove('hidden');
+            elements.princess.classList.add('anim-fall');
+            elements.bridge.classList.add('anim-bridge-shake');
+            
+            setTimeout(() => {
+              elements.bridge.classList.remove('anim-bridge-shake');
+              showModal('lost');
+            }, 1200);
+          } else {
+            elements.input.value = '';
+            elements.input.disabled = false;
+            elements.input.focus();
+          }
+        }, 500);
+      }
+    });
+
+    elements.input.addEventListener('input', () => {
+      elements.submitBtn.disabled = !elements.input.value;
+    });
+
+    // Initialize
+    renderSteps();
+    renderHearts();
+    showModal('start');
+  </script>
+</body>
+</html>
