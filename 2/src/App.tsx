@@ -2,9 +2,6 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart } from 'lucide-react';
 
-type GameState = 'start' | 'playing' | 'won' | 'lost';
-type AnimationState = 'idle' | 'jumping' | 'shaking' | 'falling';
-
 const generateQuestion = () => {
   const special = [2, 3, 5, 9];
   const general = [2, 3, 4, 5, 6, 7, 8, 9];
@@ -13,7 +10,7 @@ const generateQuestion = () => {
   return Math.random() > 0.5 ? { num1: a, num2: b } : { num1: b, num2: a };
 };
 
-const PrincessSVG = ({ isFalling }: { isFalling: boolean }) => (
+const PrincessSVG = ({ isFalling }) => (
   <svg width="60" height="80" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-md">
     {/* Arms */}
     <path d={isFalling ? "M 30 40 L 10 20 M 30 40 L 50 20" : "M 30 40 L 10 50 M 30 40 L 50 50"} fill="none" stroke="#FDE047" strokeWidth="4" strokeLinecap="round" />
@@ -38,13 +35,13 @@ const PrincessSVG = ({ isFalling }: { isFalling: boolean }) => (
 );
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>('start');
+  const [gameState, setGameState] = useState('start');
   const [lives, setLives] = useState(3);
   const [position, setPosition] = useState(0);
   const [question, setQuestion] = useState({ num1: 2, num2: 2 });
   const [inputValue, setInputValue] = useState('');
-  const [animState, setAnimState] = useState<AnimationState>('idle');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [animState, setAnimState] = useState('idle');
+  const inputRef = useRef(null);
 
   const startGame = () => {
     setLives(3);
@@ -56,7 +53,7 @@ export default function App() {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (gameState !== 'playing' || animState !== 'idle' || !inputValue) return;
 
@@ -97,7 +94,7 @@ export default function App() {
   };
 
   const positions = [0, 1, 2, 3, 4, 5, 6, 7];
-  const getLeftPos = (step: number) => `calc(10% + ${step * (80 / 7)}%)`;
+  const getLeftPos = (step) => `calc(10% + ${step * (80 / 7)}%)`;
 
   return (
     <div className="min-h-screen bg-pink-50 flex flex-col items-center justify-center p-4 font-sans">
@@ -252,33 +249,4 @@ export default function App() {
                 {gameState === 'won' && (
                   <>
                     <div className="text-7xl mb-6">🎉</div>
-                    <h2 className="text-3xl font-black text-pink-500 mb-4">過關恭喜！🎊</h2>
-                    <p className="text-gray-500 mb-8 text-lg font-bold">
-                      太棒了！<br/>小公主成功到達對岸了！✨
-                    </p>
-                    <button onClick={startGame} className="w-full bg-pink-500 text-white py-4 rounded-2xl font-black text-2xl shadow-[0_6px_0_0_rgba(219,39,119,1)] hover:shadow-[0_3px_0_0_rgba(219,39,119,1)] hover:translate-y-1 transition-all active:shadow-none active:translate-y-[6px]">
-                      再玩一次 🔄
-                    </button>
-                  </>
-                )}
-                {gameState === 'lost' && (
-                  <>
-                    <div className="text-7xl mb-6">💦</div>
-                    <h2 className="text-3xl font-black text-blue-500 mb-4">挑戰失敗</h2>
-                    <p className="text-gray-500 mb-8 text-lg font-bold">
-                      哎呀！小公主掉進水裡了... 🥺<br/>不要灰心，再試一次吧！
-                    </p>
-                    <button onClick={startGame} className="w-full bg-blue-500 text-white py-4 rounded-2xl font-black text-2xl shadow-[0_6px_0_0_rgba(59,130,246,1)] hover:shadow-[0_3px_0_0_rgba(59,130,246,1)] hover:translate-y-1 transition-all active:shadow-none active:translate-y-[6px]">
-                      重新開始 🔄
-                    </button>
-                  </>
-                )}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-      </div>
-    </div>
-  );
-}
+                    <h2 className="text-3xl
